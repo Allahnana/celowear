@@ -10,18 +10,16 @@ import BigNumber from "bignumber.js";
 
 import wear from "./contracts/wear.abi.json";
 import erc20 from "./contracts/IERC.abi.json";
+import { contractAddress, cUSDContractAddress } from "./constants/utils";
 
 const ERC20_DECIMALS = 18;
-
-const contractAddress = "0xA49401B67843E536Bb88a3443f68537769e21D71";
-const cUSDContractAddress = "0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1";
 
 function App() {
   const [contract, setcontract] = useState(null);
   const [address, setAddress] = useState(null);
   const [kit, setKit] = useState(null);
   const [cUSDBalance, setcUSDBalance] = useState(0);
-  const [clothes, setClothes] = useState([])
+  const [clothes, setClothes] = useState([]);
   const [isAdmin, setIsAdmin] = useState(false);
 
   const connectCeloWallet = async () => {
@@ -73,15 +71,12 @@ function App() {
     }
   }, [kit, address]);
 
-
   useEffect(() => {
     if (contract) {
       isUserAdmin();
       getClothes();
     }
   }, [contract]);
-  
-
 
   const getClothes = async function () {
     const clothLength = await contract.methods.getClothLength().call();
@@ -106,23 +101,24 @@ function App() {
     const cloths = await Promise.all(_cloths);
 
     setClothes(cloths);
-
   };
 
-  const isUserAdmin = async()=>{
+  const isUserAdmin = async () => {
     try {
       const isAdmin = await contract.methods.isUserAdmin(address).call();
-      console.log(isAdmin)
+      console.log(isAdmin);
       setIsAdmin(isAdmin);
-
     } catch (error) {
       console.log(error);
     }
-  }
+  };
 
-  const buyCloth = async (_index, _price)=>{
+  const buyCloth = async (_index, _price) => {
     try {
-      const cUSDContract = new kit.web3.eth.Contract(erc20, cUSDContractAddress);
+      const cUSDContract = new kit.web3.eth.Contract(
+        erc20,
+        cUSDContractAddress
+      );
       const cost = new BigNumber(_price).shiftedBy(ERC20_DECIMALS).toString();
 
       await cUSDContract.methods
@@ -136,38 +132,26 @@ function App() {
     } catch (error) {
       console.log({ error });
     }
-  }
+  };
   const addCloth = async (_name, _description, _image, _price, _isUsed) => {
     try {
-      const price = new BigNumber(_price)
-        .shiftedBy(ERC20_DECIMALS).toString();
-
+      const price = new BigNumber(_price).shiftedBy(ERC20_DECIMALS).toString();
 
       await contract.methods
-        .addCloth(
-          _name,
-          _description,
-          _image,
-          price,
-          _isUsed, 
-          
-        )
+        .addCloth(_name, _description, _image, price, _isUsed)
         .send({ from: address });
       getClothes();
     } catch (error) {
       console.log(error);
     }
-
-  }
+  };
   return (
     <Fragment>
       <Header balance={cUSDBalance} />
-      <Shop clothes = {clothes} buyCloth = {buyCloth}/>
-      {isAdmin && <AddCloth addCloth = {addCloth}/>}
+      <Shop clothes={clothes} buyCloth={buyCloth} />
+      {isAdmin && <AddCloth addCloth={addCloth} />}
     </Fragment>
   );
 }
-
-
 
 export default App;

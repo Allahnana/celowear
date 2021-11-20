@@ -22,16 +22,32 @@ interface IERC20Token {
          string image;
          uint price;
          bool isUsed;
+         bool isBlacklist;
          
      }
      
      uint internal clothLength = 0;
-     mapping (uint => Cloth) internal cloths;
-     address internal cUsdTokenAddress = 0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1;
+     mapping (uint => Cloth) public cloths;
+     address internal cUsdTokenAddress;
+     address adminAddress;
      
      modifier isAdmin(){
-         require(msg.sender == address(this),"Accessible only to the admin");
+         require(msg.sender == adminAddress,"Accessible only to the admin");
         _;
+    }
+    
+      
+     modifier onlyClotheOwner(uint _index){
+
+         require(msg.sender == cloths[_index].owner,"Accessible only to the owner of this clothe");
+        _;
+    }
+    
+    constructor(){
+        // set the admin address
+        adminAddress = msg.sender;
+        cUsdTokenAddress = 0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1;
+        
     }
      
      
@@ -43,37 +59,21 @@ interface IERC20Token {
         uint _price,
         bool _isUsed
     )public isAdmin(){
+        
         cloths[clothLength] = Cloth(
             payable(msg.sender),
             _name,
             _description, 
             _image,
             _price,
-            _isUsed
+            _isUsed,
+            false
+            
         );
         clothLength++;
     }
     
-    
-    function getCloth(uint _index)public view returns(
-        address payable,
-        string memory,
-        string memory,
-        string memory,
-        uint,
-        bool
-    ){
-        Cloth storage cloth = cloths[_index];
-        return(
-            cloth.owner,
-            cloth.name,
-            cloth.description,
-            cloth.image,
-            cloth.price,
-            cloth.isUsed
-        );
-    }
-    
+   
     function buyCloth(uint _index)public payable {
         require(
             IERC20Token(cUsdTokenAddress).transferFrom(
@@ -87,9 +87,23 @@ interface IERC20Token {
     }
     
     
+    // ediit a clothe only callable by owner of cloth
+    function editCloth(uint  _index,  string memory _name,
+        string memory _description,
+        string memory _image,
+        uint _price) public onlyClotheOwner(_index){
+        
+        cloths[_index].name = _name;
+        cloths[_index].description = _description;
+        cloths[_index].image = _image;
+        cloths[_index].price = _price;
+        
+    }
+    
+    
     // function to check if the user is an admin
     function isUserAdmin(address _address) public view returns (bool){
-        if(_address == address(this)){
+        if(_address == adminAddress){
             return true;
         }else{
           return false;  
@@ -99,5 +113,18 @@ interface IERC20Token {
     
    function getClothLength() public view returns (uint) {
         return (clothLength);
+    }
+    
+    function transferOwnership(address  _address) public isAdmin {
+        require(_address != address(0), "cannot use the zero address") ;
+        adminAddress = _address;
+    }
+    
+      function blackListClothe(uint _index) public isAdmin {
+        cloths[_index].isBlacklist = true;
+    }
+    
+     function unBlackListClothe(uint _index) public isAdmin {
+        cloths[_index].isBlacklist = false;
     }
  }
